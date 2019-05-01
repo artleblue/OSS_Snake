@@ -13,3 +13,5 @@ No libraries, pure linux C code
     p - pause
 
 Terminal options
+
+test for kyurikim
