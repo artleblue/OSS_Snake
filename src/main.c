@@ -6,9 +6,11 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+
 #define MAX_SIZE   800
 #define MAP_MAX_WIDTH  300
 #define MAP_MAX_HEIGHT 300
+
 
 const enum Dir {LEFT,RIGHT,UP,DOWN};
 
@@ -16,6 +18,7 @@ typedef struct Position
 {
     int x;
     int y;
+
 }Pos;
 
 typedef struct Snake
@@ -31,13 +34,20 @@ typedef struct Screen
 {
 	int width;
 	int height;
+
 }Screen;
 
+typedef struct GameCondition
+{
+	int turbo;
+	int paused;
+	int quit;
+
+}GameCondition;
 
 const char SnakeChar_First = 'O';
 const char SnakeChar = 'o';
 const char SnakeChar_Tail = '.';
-
 const char food = '@';
 
 Pos pos[MAX_SIZE];
@@ -46,10 +56,8 @@ Pos food_position;
 struct termios orig_term_attr;
 struct termios new_term_attr;
 
-int turbo = 0;
-int paused = 0;
-int quit = 0;
 char arena[MAP_MAX_HEIGHT][MAP_MAX_WIDTH];
+
 
 void Clear()
 {
@@ -75,8 +83,6 @@ int rand_lim(int limit)
 
 int fetch_key()
 {
-    /* read a character from the stdin stream without blocking */
-    /*   returns EOF (-1) if no character is available */
     return fgetc(stdin);
 }
 
@@ -152,7 +158,7 @@ void generate_food(Snake * snake, Screen * screen)
     printf("%c", food);
 }
 
-void game_over(Screen * screen)
+void game_over(Screen * screen, GameCondition * condition)
 {
     MoveToPos(screen->width / 2, screen->height / 2);
     printf("* GAME OVER *");
@@ -165,12 +171,12 @@ void game_over(Screen * screen)
         usleep(200);
     }
     if (key == 120)
-        quit = 2;
+        condition->quit = 2;
     else
-        quit = 1;
+        condition->quit = 1;
 }
 
-void move_snake(Snake * snake, Screen * screen)
+void move_snake(Snake * snake, Screen * screen, GameCondition * condition)
 {
     int add_x = 0;
     int add_y = 0;
@@ -193,17 +199,15 @@ void move_snake(Snake * snake, Screen * screen)
     Pos head = pos[0];
     Pos tail = pos[snake->size];
 
-    // replace tail with space
     MoveToPos(tail.x, tail.y);
     printf(" ");
 
-    // replace head with normal
     MoveToPos(head.x, head.y);
     printf("%c", SnakeChar);
 
-    // shift the snake
     int remaining = snake->size + 1;
-    while (--remaining > 0)
+   
+	 while (--remaining > 0)
     {
         pos[remaining].x = pos[remaining-1].x;
         pos[remaining].y = pos[remaining-1].y;
@@ -216,11 +220,10 @@ void move_snake(Snake * snake, Screen * screen)
 
     if (check_snake_collision(head,snake,screen))
     {
-        game_over(screen);
+        game_over(screen,condition);
         return;
     }
 
-    // check if we ate food
     if (head.x == food_position.x && head.y == food_position.y)
     {
         snake->size++;
@@ -233,30 +236,31 @@ void move_snake(Snake * snake, Screen * screen)
     pos[0].x += add_x;
     pos[0].y += add_y;
 
-    // make new head
     MoveToPos(pos[0].x, pos[0].y);
     printf("%c", SnakeChar_First);
-    // make new tail
+
     MoveToPos(pos[snake->size].x, pos[snake->size].y);
     printf("%c", SnakeChar_Tail);
-    if (respawn)
+    
+	 
+	 if (respawn)
         generate_food(snake,screen);
     else
     {
         MoveToPos(food_position.x, food_position.y);
         printf("%c", food);
     }
-    MoveToPos(screen->width, screen->height + 1);
+    
+	 MoveToPos(screen->width, screen->height + 1);
     fflush(stdout);
 }
 
 void GenerateSnake(Snake * snake, Screen * screen)
 {
-	//create new snake in middle of screen
 	int start_x = screen->width / 2;
 	int start_y = screen->height / 2;
-	//generate snake
 	int remaining = -1;
+	
 	while (remaining++ < snake->size)
 	{
 		if(start_x < 0)
@@ -269,25 +273,26 @@ void GenerateSnake(Snake * snake, Screen * screen)
 void draw_snake(Snake * snake)
 {
     int remaining = -1;
-    while (remaining++ < snake->size)
+   
+	 while (remaining++ < snake->size)
     {
         char symbol = SnakeChar;
         if (remaining == 0)
             symbol = SnakeChar_First;
         else if (remaining == snake->size)
             symbol = SnakeChar_Tail;
-        // go to position
+       
         MoveToPos(pos[remaining].x, pos[remaining].y);
         printf("%c", symbol);
     }
     fflush(stdout);
 }
 
-void play(Snake * snake, Screen * screen)
+void play(Snake * snake, Screen * screen,GameCondition * condition)
 {
-    while(!quit)
+    while(!condition->quit)
     {
-        if (!turbo)
+        if (!condition->turbo)
             usleep(snake->speed * 1000);
         else
             usleep(snake->speed * 100);
@@ -297,7 +302,7 @@ void play(Snake * snake, Screen * screen)
             switch (key)
             {
                 case 116:
-                    turbo = !turbo;
+                    condition->turbo = !condition->turbo;
                     break;
                 case 65:
                     snake->new_direction = DOWN;
@@ -312,25 +317,28 @@ void play(Snake * snake, Screen * screen)
                     snake->new_direction = LEFT;
                     break;
                 case 112:
-                    if (paused)
-                        paused = 0;
+                    if (condition->paused)
+                        condition->paused = 0;
                     else
-                        paused = 1;
+                       condition->paused = 1;
                     break;
                 case 120:
-                    quit = 2;
+                    condition->quit = 2;
                     break;
             }
-            key = fetch_key();
+           
+				key = fetch_key();
         }
-        if (quit)
+       
+		  if (condition->quit)
             return;
-        if (paused)
+        if (condition->paused)
             continue;
-        if (!(snake->new_direction == RIGHT && snake->direction == LEFT) && !(snake->new_direction == LEFT && snake->direction == RIGHT) &&
+        
+		  if (!(snake->new_direction == RIGHT && snake->direction == LEFT) && !(snake->new_direction == LEFT && snake->direction == RIGHT) &&
             !(snake->new_direction == UP && snake->direction == DOWN) && !(snake->new_direction == DOWN && snake->direction == UP))
             snake->direction = snake->new_direction;
-        move_snake(snake, screen);
+        move_snake(snake, screen,condition);
     }
 }
 
@@ -338,7 +346,7 @@ void play(Snake * snake, Screen * screen)
 void new_game(Snake * snake, Screen * screen)
 {
     snake->size = 3;
-    // reset for debugging
+   
     int ax = 0;
     int ay = 0;
     do
@@ -349,8 +357,10 @@ void new_game(Snake * snake, Screen * screen)
             arena[ax][ay] = ' ';
         } while (++ay < MAP_MAX_WIDTH);
     } while (++ax < MAP_MAX_HEIGHT);
-    int current_pos = -1;
-    while (current_pos++ < MAX_SIZE)
+   
+	 int current_pos = -1;
+    
+	 while (current_pos++ < MAX_SIZE)
     {
         pos[current_pos].x = -10;
         pos[current_pos].y = -10;
@@ -373,6 +383,12 @@ void InitSnake(Snake * snake)
 	snake->direction = RIGHT;
 }
 
+void InitGameCondition(GameCondition * condition)
+{
+	condition->paused = 0;
+	condition->quit = 0;
+	condition->turbo = 0;
+}
 
 void InitScreen(Screen * screen, struct winsize * w)
 {
@@ -410,15 +426,14 @@ int main(int argc, char **argv)
 
 	 Snake snake;
 	 Screen screen;
+	 GameCondition condition;
 
     struct winsize w;
 
     srand(time(NULL));
 
 	 InitSnake(&snake);
-
-
-    /* set the terminal to raw mode */
+	 InitGameCondition(&condition);
     
 	 SetTerminal(&w);
 
@@ -426,14 +441,13 @@ int main(int argc, char **argv)
  
     tcsetattr(fileno(stdin), TCSANOW, &new_term_attr);
  
-	 while (quit != 2)
+	 while (condition.quit != 2)
     {
         new_game(&snake,&screen);
-        quit = 0;
-        play(&snake,&screen);
+        condition.quit = 0;
+        play(&snake,&screen,&condition);
     }
 
-    /* restore the original terminal attributes */
     Clear();
     tcsetattr(fileno(stdin), TCSANOW, &orig_term_attr);
     
