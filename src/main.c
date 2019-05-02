@@ -7,8 +7,8 @@
 #include <unistd.h>
 
 #define MAX_SIZE   800
-#define MAX_WIDTH  300
-#define MAX_HEIGHT 300
+#define MAP_MAX_WIDTH  300
+#define MAP_MAX_HEIGHT 300
 
 const enum Dir {LEFT,RIGHT,UP,DOWN};
 
@@ -22,25 +22,26 @@ typedef struct Snake
 {
 	int size;
 	int speed;
+	int direction;
+	int new_direction;
 
 }Snake;
 
-char SnakeChar_First = 'O';
-char SnakeChar = 'o';
-char SnakeChar_Tail = '.';
+typedef struct Screen
+{
+	int width;
+	int height;
+}Screen;
 
-char food = '@';
 
-int screen_width = -30;
-int screen_height = -30;
+const char SnakeChar_First = 'O';
+const char SnakeChar = 'o';
+const char SnakeChar_Tail = '.';
 
-int direction;
-int new_direction;
+const char food = '@';
 
-Snake snake;
-
-struct Position pos[MAX_SIZE];
-struct Position food_position;
+Pos pos[MAX_SIZE];
+Pos food_position;
 
 struct termios orig_term_attr;
 struct termios new_term_attr;
@@ -48,7 +49,7 @@ struct termios new_term_attr;
 int turbo = 0;
 int paused = 0;
 int quit = 0;
-char arena[MAX_HEIGHT][MAX_WIDTH];
+char arena[MAP_MAX_HEIGHT][MAP_MAX_WIDTH];
 
 void Clear()
 {
@@ -85,40 +86,40 @@ void fatal(char *reason)
     exit(1);
 }
 
-void randomize_food()
+void randomize_food(Screen * screen)
 {
-    food_position.x = rand_lim(screen_width);
-    food_position.y = rand_lim(screen_height);
+    food_position.x = rand_lim(screen->width);
+    food_position.y = rand_lim(screen->height);
 }
 
-void draw_map()
+void draw_map(Screen * screen)
 {
     int x,y;
     x = 0;
-    while (x-1 < screen_width)
+    while (x-1 < screen->width)
     {
         y = 0;
         do {
-            if (x == 0 || y == 0 || x >= screen_width || y >= screen_height-1)
+            if (x == 0 || y == 0 || x >= screen->width || y >= screen->height-1)
             {
                 arena[x][y] = '*';
                 MoveToPos(x,y);
                 printf("*");
             }
-        } while (y++ < screen_height-1);
+        } while (y++ < screen->height-1);
        x++;
     }
 }
 
-void hud()
+void hud(Snake * snake)
 {
 	 const int SCREEN_HEIGHT = 31;
     MoveToPos(0, SCREEN_HEIGHT ); 
 
-	 printf("Score: %i | t - turbo | x - Quit the game | p - pause the game ", snake.size - 3);
+	 printf("Score: %i | t - turbo | x - Quit the game | p - pause the game ", snake->size - 3);
 }
 
-int check_snake_collision(struct Position px)
+int check_snake_collision(Pos px, Snake * snake, Screen * screen)
 {
     if (arena[px.x][px.y] != ' ')
         return 1;
@@ -126,13 +127,13 @@ int check_snake_collision(struct Position px)
         return 1;
     if (px.y < 1)
         return 1;
-    if (px.x > screen_width - 2)
+    if (px.x > screen->width - 2)
         return 1;
-    if (px.y > screen_height - 1)
+    if (px.y > screen->height - 1)
         return 1;
 
     int remaining = -1;
-    while (remaining++ < snake.size)
+    while (remaining++ < snake->size)
     {
         if (pos[remaining].x == px.x && pos[remaining].y == px.y)
             return 1;
@@ -141,21 +142,21 @@ int check_snake_collision(struct Position px)
     return 0;
 }
 
-void generate_food()
+void generate_food(Snake * snake, Screen * screen)
 {
-    randomize_food();
-    while (check_snake_collision(food_position))
-        randomize_food();
+    randomize_food(screen);
+    while (check_snake_collision(food_position,snake,screen))
+        randomize_food(screen);
     // draw it
     MoveToPos(food_position.x, food_position.y);
     printf("%c", food);
 }
 
-void game_over()
+void game_over(Screen * screen)
 {
-    MoveToPos(screen_width / 2, screen_height / 2);
+    MoveToPos(screen->width / 2, screen->height / 2);
     printf("* GAME OVER *");
-    MoveToPos((screen_width / 2) - 10, (screen_height / 2) + 2);
+    MoveToPos((screen->width / 2) - 10, (screen->height / 2) + 2);
     printf("Press x to exit or n for new game");
     int key = -1;
     while (key != 110 && key != 120)
@@ -169,11 +170,11 @@ void game_over()
         quit = 1;
 }
 
-void move_snake()
+void move_snake(Snake * snake, Screen * screen)
 {
     int add_x = 0;
     int add_y = 0;
-    switch (direction)
+    switch (snake->direction)
     {
         case RIGHT:
             add_x = 1;
@@ -190,7 +191,7 @@ void move_snake()
     }
 
     Pos head = pos[0];
-    Pos tail = pos[snake.size];
+    Pos tail = pos[snake->size];
 
     // replace tail with space
     MoveToPos(tail.x, tail.y);
@@ -201,7 +202,7 @@ void move_snake()
     printf("%c", SnakeChar);
 
     // shift the snake
-    int remaining = snake.size + 1;
+    int remaining = snake->size + 1;
     while (--remaining > 0)
     {
         pos[remaining].x = pos[remaining-1].x;
@@ -213,19 +214,19 @@ void move_snake()
 
     int respawn = 0;
 
-    if (check_snake_collision(head))
+    if (check_snake_collision(head,snake,screen))
     {
-        game_over();
+        game_over(screen);
         return;
     }
 
     // check if we ate food
     if (head.x == food_position.x && head.y == food_position.y)
     {
-        snake.size++;
-        hud();
-        pos[snake.size].x = tail.x;
-        pos[snake.size].y = tail.y;
+        snake->size++;
+        hud(snake);
+        pos[snake->size].x = tail.x;
+        pos[snake->size].y = tail.y;
         respawn = 1;
     }
 
@@ -236,27 +237,27 @@ void move_snake()
     MoveToPos(pos[0].x, pos[0].y);
     printf("%c", SnakeChar_First);
     // make new tail
-    MoveToPos(pos[snake.size].x, pos[snake.size].y);
+    MoveToPos(pos[snake->size].x, pos[snake->size].y);
     printf("%c", SnakeChar_Tail);
     if (respawn)
-        generate_food();
+        generate_food(snake,screen);
     else
     {
         MoveToPos(food_position.x, food_position.y);
         printf("%c", food);
     }
-    MoveToPos(screen_width, screen_height + 1);
+    MoveToPos(screen->width, screen->height + 1);
     fflush(stdout);
 }
 
-void GenerateSnake()
+void GenerateSnake(Snake * snake, Screen * screen)
 {
 	//create new snake in middle of screen
-	int start_x = screen_width / 2;
-	int start_y = screen_height / 2;
+	int start_x = screen->width / 2;
+	int start_y = screen->height / 2;
 	//generate snake
 	int remaining = -1;
-	while (remaining++ < snake.size)
+	while (remaining++ < snake->size)
 	{
 		if(start_x < 0)
 			fatal("The screen is too small");
@@ -265,15 +266,15 @@ void GenerateSnake()
 	}
 }
 
-void draw_snake()
+void draw_snake(Snake * snake)
 {
     int remaining = -1;
-    while (remaining++ < snake.size)
+    while (remaining++ < snake->size)
     {
         char symbol = SnakeChar;
         if (remaining == 0)
             symbol = SnakeChar_First;
-        else if (remaining == snake.size)
+        else if (remaining == snake->size)
             symbol = SnakeChar_Tail;
         // go to position
         MoveToPos(pos[remaining].x, pos[remaining].y);
@@ -282,14 +283,14 @@ void draw_snake()
     fflush(stdout);
 }
 
-void play()
+void play(Snake * snake, Screen * screen)
 {
     while(!quit)
     {
         if (!turbo)
-            usleep(snake.speed * 1000);
+            usleep(snake->speed * 1000);
         else
-            usleep(snake.speed * 100);
+            usleep(snake->speed * 100);
         int key = fetch_key();
         while (key != -1)
         {
@@ -299,16 +300,16 @@ void play()
                     turbo = !turbo;
                     break;
                 case 65:
-                    new_direction = DOWN;
+                    snake->new_direction = DOWN;
                     break;
                 case 66:
-                    new_direction = UP;
+                    snake->new_direction = UP;
                     break;
                 case 67:
-                    new_direction = RIGHT;
+                    snake->new_direction = RIGHT;
                     break;
                 case 68:
-                    new_direction = LEFT;
+                    snake->new_direction = LEFT;
                     break;
                 case 112:
                     if (paused)
@@ -326,17 +327,17 @@ void play()
             return;
         if (paused)
             continue;
-        if (!(new_direction == RIGHT && direction == LEFT) && !(new_direction == LEFT && direction == RIGHT) &&
-            !(new_direction == UP && direction == DOWN) && !(new_direction == DOWN && direction == UP))
-            direction = new_direction;
-        move_snake();
+        if (!(snake->new_direction == RIGHT && snake->direction == LEFT) && !(snake->new_direction == LEFT && snake->direction == RIGHT) &&
+            !(snake->new_direction == UP && snake->direction == DOWN) && !(snake->new_direction == DOWN && snake->direction == UP))
+            snake->direction = snake->new_direction;
+        move_snake(snake, screen);
     }
 }
 
 
-void new_game()
+void new_game(Snake * snake, Screen * screen)
 {
-    snake.size = 3;
+    snake->size = 3;
     // reset for debugging
     int ax = 0;
     int ay = 0;
@@ -346,8 +347,8 @@ void new_game()
         do
         {
             arena[ax][ay] = ' ';
-        } while (++ay < MAX_WIDTH);
-    } while (++ax < MAX_HEIGHT);
+        } while (++ay < MAP_MAX_WIDTH);
+    } while (++ax < MAP_MAX_HEIGHT);
     int current_pos = -1;
     while (current_pos++ < MAX_SIZE)
     {
@@ -355,56 +356,86 @@ void new_game()
         pos[current_pos].y = -10;
     }
     
-	 GenerateSnake();
+	 GenerateSnake(snake, screen);
 
-    new_direction =   RIGHT;
-    direction =       RIGHT;
     Clear();
-    draw_map();
-    generate_food();
-    hud();
-    draw_snake();
+    draw_map(screen);
+    generate_food(snake, screen);
+    hud(snake);
+    draw_snake(snake);
 }
 
-void SnakeInit()
+void InitSnake(Snake * snake)
 {
-	snake.size = 0;
-	snake.speed = 80;
+	snake->size = 0;
+	snake->speed = 80;
+	snake->new_direction = RIGHT;
+	snake->direction = RIGHT;
 }
 
 
-int main(int argc, char **argv)
+void InitScreen(Screen * screen, struct winsize * w)
 {
-    struct winsize w;
-    srand(time(NULL));
+	screen->width = -30;
+	screen->height = -30;
 
-	 SnakeInit();
+	if(screen->width < 0 || screen->height < 0)
+	{
+		screen->height = w->ws_row - 1;
+		screen->width = w->ws_col;
+	}
+	
+	if(screen->width >= MAP_MAX_WIDTH)
+	{	
+		screen->width = MAP_MAX_WIDTH - 1;
+	}
+	if(screen->height >= MAP_MAX_HEIGHT)
+	{
+		screen->height = MAP_MAX_HEIGHT - 1;
+	}
+}
 
-    /* set the terminal to raw mode */
-    tcgetattr(fileno(stdin), &orig_term_attr);
+void SetTerminal(struct winsize * w)
+{
+	 tcgetattr(fileno(stdin), &orig_term_attr);
     memcpy(&new_term_attr, &orig_term_attr, sizeof(struct termios));
     new_term_attr.c_lflag &= ~(ECHO|ICANON);
     new_term_attr.c_cc[VTIME] = 0;
     new_term_attr.c_cc[VMIN] = 0;
-    ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
-    if (screen_width < 0 || screen_height < 0)
-    {
-        screen_height = w.ws_row - 1;
-        screen_width = w.ws_col;
-    }
-    if (screen_width >= MAX_WIDTH)
-        screen_width = MAX_WIDTH - 1;
-    if (screen_height >= MAX_HEIGHT)
-        screen_height = MAX_HEIGHT - 1; 
+    ioctl(STDOUT_FILENO, TIOCGWINSZ, w);
+}
+
+int main(int argc, char **argv)
+{
+
+	 Snake snake;
+	 Screen screen;
+
+    struct winsize w;
+
+    srand(time(NULL));
+
+	 InitSnake(&snake);
+
+
+    /* set the terminal to raw mode */
+    
+	 SetTerminal(&w);
+
+	 InitScreen(&screen, &w);
+ 
     tcsetattr(fileno(stdin), TCSANOW, &new_term_attr);
-    while (quit != 2)
+ 
+	 while (quit != 2)
     {
-        new_game();
+        new_game(&snake,&screen);
         quit = 0;
-        play();
+        play(&snake,&screen);
     }
+
     /* restore the original terminal attributes */
     Clear();
     tcsetattr(fileno(stdin), TCSANOW, &orig_term_attr);
-    return 0;
+    
+	 return 0;
 }
