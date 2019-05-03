@@ -5,21 +5,14 @@
 #include <sys/ioctl.h>
 #include <stdlib.h>
 #include <unistd.h>
-
+#include "test.h"
+#include "location.h"
 
 #define MAX_SIZE   800
 #define MAP_MAX_WIDTH  300
 #define MAP_MAX_HEIGHT 300
 
-
-const enum Dir {LEFT,RIGHT,UP,DOWN};
-
-typedef struct Position
-{
-    int x;
-    int y;
-
-}Pos;
+const enum Dir {LEFT, RIGHT, UP, DOWN};
 
 typedef struct Snake
 {
