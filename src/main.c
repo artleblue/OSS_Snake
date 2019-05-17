@@ -12,6 +12,8 @@
 #define MAP_MAX_WIDTH  300
 #define MAP_MAX_HEIGHT 300
 
+// test for jenkins build.
+
 const enum Dir {LEFT, RIGHT, UP, DOWN};
 
 typedef struct Snake
