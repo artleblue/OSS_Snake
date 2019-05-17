@@ -12,7 +12,7 @@
 #define MAP_MAX_WIDTH  300
 #define MAP_MAX_HEIGHT 300
 
-// test for jenkins build.
+// test for jenkins build2 using pushing.
 
 const enum Dir {LEFT, RIGHT, UP, DOWN};
 
