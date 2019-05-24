@@ -5,7 +5,6 @@
 #include <sys/ioctl.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include "test.h"
 #include "location.h"
 
 #define MAX_SIZE   800
@@ -18,6 +17,10 @@ const enum Dir {LEFT, RIGHT, UP, DOWN};
 
 typedef struct Snake
 {
+	char SnakeChar_First;
+	char SnakeChar;
+	char SnakeChar_Tail;
+	
 	int size;
 	int speed;
 	int direction;
@@ -40,9 +43,6 @@ typedef struct GameCondition
 
 }GameCondition;
 
-const char SnakeChar_First = 'O';
-const char SnakeChar = 'o';
-const char SnakeChar_Tail = '.';
 const char food = '@';
 
 Pos pos[MAX_SIZE];
@@ -198,7 +198,7 @@ void move_snake(Snake * snake, Screen * screen, GameCondition * condition)
     printf(" ");
 
     MoveToPos(head.x, head.y);
-    printf("%c", SnakeChar);
+    printf("%c",snake->SnakeChar);
 
     int remaining = snake->size + 1;
    
@@ -232,10 +232,10 @@ void move_snake(Snake * snake, Screen * screen, GameCondition * condition)
     pos[0].y += add_y;
 
     MoveToPos(pos[0].x, pos[0].y);
-    printf("%c", SnakeChar_First);
+    printf("%c", snake->SnakeChar_First);
 
     MoveToPos(pos[snake->size].x, pos[snake->size].y);
-    printf("%c", SnakeChar_Tail);
+    printf("%c",snake->SnakeChar_Tail);
     
 	 
 	 if (respawn)
@@ -271,11 +271,11 @@ void draw_snake(Snake * snake)
    
 	 while (remaining++ < snake->size)
     {
-        char symbol = SnakeChar;
+        char symbol = snake->SnakeChar;
         if (remaining == 0)
-            symbol = SnakeChar_First;
+            symbol = snake->SnakeChar_First;
         else if (remaining == snake->size)
-            symbol = SnakeChar_Tail;
+            symbol = snake->SnakeChar_Tail;
        
         MoveToPos(pos[remaining].x, pos[remaining].y);
         printf("%c", symbol);
@@ -372,6 +372,9 @@ void new_game(Snake * snake, Screen * screen)
 
 void InitSnake(Snake * snake)
 {
+	snake->SnakeChar_First = '@';
+	snake->SnakeChar = 'o';
+	snake->SnakeChar_Tail = '.';
 	snake->size = 0;
 	snake->speed = 80;
 	snake->new_direction = RIGHT;
