@@ -6,12 +6,11 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include "location.h"
+#include <stdbool.h>
 
 #define MAX_SIZE   800
 #define MAP_MAX_WIDTH  300
 #define MAP_MAX_HEIGHT 300
-
-// test for jenkins build2 using pushing.
 
 const enum Dir {LEFT, RIGHT, UP, DOWN};
 
@@ -20,13 +19,16 @@ typedef struct Snake
 	char SnakeChar_First;
 	char SnakeChar;
 	char SnakeChar_Tail;
-	
+
 	int size;
 	int speed;
 	int direction;
 	int new_direction;
 
 }Snake;
+
+int SetSnakeSize(Snake * snake, int size_);
+int GetSnakeSize(Snake * snake);
 
 typedef struct Screen
 {
@@ -114,10 +116,13 @@ void draw_map(Screen * screen)
 
 void hud(Snake * snake)
 {
-	 const int SCREEN_HEIGHT = 31;
+	const int SCREEN_HEIGHT = 31;
+	const int SNAKE_SIZE = GetSnakeSize(snake);
+	const int SCORES = SNAKE_SIZE - 3;
+
     MoveToPos(0, SCREEN_HEIGHT ); 
 
-	 printf("Score: %i | t - turbo | x - Quit the game | p - pause the game ", snake->size - 3);
+	printf("Score: %i | t - turbo | x - Quit the game | p - pause the game ", SCORES);
 }
 
 int check_snake_collision(Pos px, Snake * snake, Screen * screen)
@@ -134,7 +139,7 @@ int check_snake_collision(Pos px, Snake * snake, Screen * screen)
         return 1;
 
     int remaining = -1;
-    while (remaining++ < snake->size)
+    while (remaining++ < GetSnakeSize(snake))
     {
         if (pos[remaining].x == px.x && pos[remaining].y == px.y)
             return 1;
@@ -173,8 +178,13 @@ void game_over(Screen * screen, GameCondition * condition)
 
 void move_snake(Snake * snake, Screen * screen, GameCondition * condition)
 {
+    int SNAKE_SIZE = GetSnakeSize(snake);
+	const int SNAKE_SIZE_PLUS = SNAKE_SIZE + 1;
+
     int add_x = 0;
     int add_y = 0;
+
+
     switch (snake->direction)
     {
         case RIGHT:
@@ -192,7 +202,7 @@ void move_snake(Snake * snake, Screen * screen, GameCondition * condition)
     }
 
     Pos head = pos[0];
-    Pos tail = pos[snake->size];
+    Pos tail = pos[SNAKE_SIZE];
 
     MoveToPos(tail.x, tail.y);
     printf(" ");
@@ -200,7 +210,7 @@ void move_snake(Snake * snake, Screen * screen, GameCondition * condition)
     MoveToPos(head.x, head.y);
     printf("%c",snake->SnakeChar);
 
-    int remaining = snake->size + 1;
+    int remaining = SNAKE_SIZE + 1;
    
 	 while (--remaining > 0)
     {
@@ -221,10 +231,11 @@ void move_snake(Snake * snake, Screen * screen, GameCondition * condition)
 
     if (head.x == food_position.x && head.y == food_position.y)
     {
-        snake->size++;
+		SetSnakeSize(snake, SNAKE_SIZE_PLUS);
+		SNAKE_SIZE = GetSnakeSize(snake);
         hud(snake);
-        pos[snake->size].x = tail.x;
-        pos[snake->size].y = tail.y;
+        pos[SNAKE_SIZE].x = tail.x;
+        pos[SNAKE_SIZE].y = tail.y;
         respawn = 1;
     }
 
@@ -234,7 +245,7 @@ void move_snake(Snake * snake, Screen * screen, GameCondition * condition)
     MoveToPos(pos[0].x, pos[0].y);
     printf("%c", snake->SnakeChar_First);
 
-    MoveToPos(pos[snake->size].x, pos[snake->size].y);
+    MoveToPos(pos[SNAKE_SIZE].x, pos[SNAKE_SIZE].y);
     printf("%c",snake->SnakeChar_Tail);
     
 	 
@@ -252,11 +263,12 @@ void move_snake(Snake * snake, Screen * screen, GameCondition * condition)
 
 void GenerateSnake(Snake * snake, Screen * screen)
 {
+	const int SNAKE_SIZE = GetSnakeSize(snake);
 	int start_x = screen->width / 2;
 	int start_y = screen->height / 2;
 	int remaining = -1;
 	
-	while (remaining++ < snake->size)
+	while (remaining++ < SNAKE_SIZE)
 	{
 		if(start_x < 0)
 			fatal("The screen is too small");
@@ -267,14 +279,15 @@ void GenerateSnake(Snake * snake, Screen * screen)
 
 void draw_snake(Snake * snake)
 {
+	const int SNAKE_SIZE = GetSnakeSize(snake); 
     int remaining = -1;
    
-	 while (remaining++ < snake->size)
+	 while (remaining++ < SNAKE_SIZE)
     {
         char symbol = snake->SnakeChar;
         if (remaining == 0)
             symbol = snake->SnakeChar_First;
-        else if (remaining == snake->size)
+        else if (remaining == SNAKE_SIZE)
             symbol = snake->SnakeChar_Tail;
        
         MoveToPos(pos[remaining].x, pos[remaining].y);
@@ -340,12 +353,13 @@ void play(Snake * snake, Screen * screen,GameCondition * condition)
 
 void new_game(Snake * snake, Screen * screen)
 {
-    snake->size = 3;
-   
     int ax = 0;
     int ay = 0;
-    do
-    {
+    
+    SetSnakeSize(snake, 3);
+    
+	do
+	{
         ay = 0;
         do
         {
@@ -375,7 +389,7 @@ void InitSnake(Snake * snake)
 	snake->SnakeChar_First = '@';
 	snake->SnakeChar = 'o';
 	snake->SnakeChar_Tail = '.';
-	snake->size = 0;
+	SetSnakeSize(snake, 0);
 	snake->speed = 80;
 	snake->new_direction = RIGHT;
 	snake->direction = RIGHT;
@@ -421,7 +435,6 @@ void SetTerminal(struct winsize * w)
 
 int main(int argc, char **argv)
 {
-
 	 Snake snake;
 	 Screen screen;
 	 GameCondition condition;
@@ -450,4 +463,15 @@ int main(int argc, char **argv)
     tcsetattr(fileno(stdin), TCSANOW, &orig_term_attr);
     
 	 return 0;
+}
+
+
+int SetSnakeSize(Snake * snake, int size_)
+{
+	snake->size = size_;
+}
+
+int GetSnakeSize(Snake * snake)
+{
+	return snake->size;
 }
