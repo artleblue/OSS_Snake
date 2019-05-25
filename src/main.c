@@ -39,6 +39,12 @@ void InitSnake(Snake * snake);
 
 int SetSnakeSize(Snake * snake, int size_);
 int GetSnakeSize(Snake * snake);
+int SetSnakeDirection(Snake * snake, int direction_);
+int GetSnakeDirection(Snake * snake);
+int SetSnakeNextDirection(Snake * snake, int nextDirection_);
+int GetSnakeNextDirection(Snake * snake);
+int SetSnakeSpeed(Snake * snake, int speed_);
+int GetSnakeSpeed(Snake * snake);
 
 int CheckSnakeCollision(Pos px, Snake * snake, Screen * screen);
 int CheckSnakeCollisionWithoutHead(Pos px, Snake * snake, Screen * screen);
@@ -46,8 +52,11 @@ int SetSnakeInitPos(Snake * snake, const int SCREEN_WIDTH, const int SCREEN_HEIG
 int MoveSnakePos(Snake * snake);
 
 // Display
+
+void InitScreen(Screen * screen, struct winsize * w);
+
 void draw_snake(Snake * snake);
-void DrawGameInfo(Snake * snake);
+void DrawGameInfo(Snake * snake, Screen * screen);
 
 //
 typedef struct GameCondition
@@ -157,12 +166,11 @@ void game_over(Screen * screen, GameCondition * condition)
 
 void play(Snake * snake, Screen * screen,GameCondition * condition)
 {
+	int WAIT_FOR_SECONDS = GetSnakeSpeed(snake) * 1000;
+
     while(!condition->quit)
     {
-        if (!condition->turbo)
-            usleep(snake->speed * 1000);
-        else
-            usleep(snake->speed * 100);
+	    usleep(WAIT_FOR_SECONDS);
         int key = fetch_key();
         while (key != -1)
         {
@@ -170,19 +178,28 @@ void play(Snake * snake, Screen * screen,GameCondition * condition)
             {
                 case 116:
                     condition->turbo = !condition->turbo;
-                    break;
+					if (condition->turbo)
+					{
+						SetSnakeSpeed(snake, 8);
+					}
+					else
+					{
+						SetSnakeSpeed(snake, 80);
+					}
+					WAIT_FOR_SECONDS = GetSnakeSpeed(snake) * 1000;
+					break;
                 case 65:
-                    snake->new_direction = DOWN;
+					SetSnakeNextDirection(snake, DOWN);
                     break;
                 case 66:
-                    snake->new_direction = UP;
+					SetSnakeNextDirection(snake, UP);
                     break;
                 case 67:
-                    snake->new_direction = RIGHT;
-                    break;
+					SetSnakeNextDirection(snake, RIGHT);
+					break;
                 case 68:
-                    snake->new_direction = LEFT;
-                    break;
+					SetSnakeNextDirection(snake, LEFT);
+					break;
                 case 112:
                     if (condition->paused)
                         condition->paused = 0;
@@ -197,15 +214,21 @@ void play(Snake * snake, Screen * screen,GameCondition * condition)
 				key = fetch_key();
         }
        
-		  if (condition->quit)
+		if (condition->quit)
             return;
         if (condition->paused)
             continue;
         
-		  if (!(snake->new_direction == RIGHT && snake->direction == LEFT) && !(snake->new_direction == LEFT && snake->direction == RIGHT) &&
-            !(snake->new_direction == UP && snake->direction == DOWN) && !(snake->new_direction == DOWN && snake->direction == UP))
-            snake->direction = snake->new_direction;
-      
+		int SNAKE_NEXT_DIRECTION = GetSnakeNextDirection(snake);
+		int SNAKE_CUR_DIRECTION = GetSnakeDirection(snake);
+		if (!(SNAKE_NEXT_DIRECTION == RIGHT && SNAKE_CUR_DIRECTION == LEFT) 
+			  && !(SNAKE_NEXT_DIRECTION == LEFT && SNAKE_CUR_DIRECTION == RIGHT) 
+			  && !(SNAKE_NEXT_DIRECTION == UP && SNAKE_CUR_DIRECTION == DOWN) 
+			  && !(SNAKE_NEXT_DIRECTION == DOWN && SNAKE_CUR_DIRECTION == UP))
+        { 
+		   SetSnakeDirection(snake, SNAKE_NEXT_DIRECTION);
+		}
+
 		MoveSnakePos(snake);
 		
 		// game over when collpse with others.
@@ -225,7 +248,7 @@ void play(Snake * snake, Screen * screen,GameCondition * condition)
 			
 			SNAKE_SIZE += 1;
 			SetSnakeSize(snake, SNAKE_SIZE);
-			DrawGameInfo(snake);
+			DrawGameInfo(snake, screen);
 			pos[SNAKE_SIZE].x = tail.x;
 			pos[SNAKE_SIZE].y = tail.y;
 			respawn = 1;
@@ -276,7 +299,7 @@ void new_game(Snake * snake, Screen * screen)
     Clear();
     draw_map(screen);
     generate_food(snake, screen);
-    DrawGameInfo(snake);
+    DrawGameInfo(snake, screen);
 	draw_snake(snake);
 }
 
@@ -285,27 +308,6 @@ void InitGameCondition(GameCondition * condition)
 	condition->paused = 0;
 	condition->quit = 0;
 	condition->turbo = 0;
-}
-
-void InitScreen(Screen * screen, struct winsize * w)
-{
-	screen->width = -30;
-	screen->height = -30;
-
-	if(screen->width < 0 || screen->height < 0)
-	{
-		screen->height = w->ws_row - 1;
-		screen->width = w->ws_col;
-	}
-	
-	if(screen->width >= MAP_MAX_WIDTH)
-	{	
-		screen->width = MAP_MAX_WIDTH - 1;
-	}
-	if(screen->height >= MAP_MAX_HEIGHT)
-	{
-		screen->height = MAP_MAX_HEIGHT - 1;
-	}
 }
 
 void SetTerminal(struct winsize * w)
@@ -432,10 +434,12 @@ int MoveSnakePos(Snake * snake)
    // return: when snake moves without erros, returns true.
    // return: when snake can't move, return false.
 	const int SNAKE_SIZE = GetSnakeSize(snake);
+	const int SNAKE_DIRECTION = GetSnakeDirection(snake);
 	int add_x = 0;
 	int add_y = 0;
 	
-	switch (snake->direction)
+
+	switch (SNAKE_DIRECTION)
 	{
 		case RIGHT:
 		   add_x = 1;
@@ -490,9 +494,9 @@ void InitSnake(Snake * snake)
 	snake->SnakeChar = 'o';
 	snake->SnakeChar_Tail = '.';
 	SetSnakeSize(snake, 0);
-	snake->speed = 80;
-	snake->new_direction = RIGHT;
-	snake->direction = RIGHT;
+	SetSnakeSpeed(snake, 80);
+	SetSnakeNextDirection(snake, RIGHT);
+	SetSnakeDirection(snake, RIGHT);
 }
 
 
@@ -516,7 +520,7 @@ void draw_snake(Snake * snake)
 
 }
 
-void DrawGameInfo(Snake * snake)
+void DrawGameInfo(Snake * snake, Screen * screen)
 {
 	const int SCREEN_HEIGHT = 31;
 	const int SNAKE_SIZE = GetSnakeSize(snake);
@@ -527,4 +531,69 @@ void DrawGameInfo(Snake * snake)
 	printf("Score: %i | t - turbo | x - Quit the game | p - pause the game ", SCORES);
 }
 
+int SetSnakeDirection(Snake * snake, int direction_)
+{
+	if (direction_ != RIGHT
+		&& direction_ != LEFT
+		&& direction_ != UP
+		&& direction_ != DOWN)
+	{
+	   return -1;
+	}
 
+	snake->direction = direction_;
+	return 0;
+}
+
+int GetSnakeDirection(Snake * snake)
+{
+	return snake->direction;
+}
+
+void InitScreen(Screen * screen, struct winsize * w)
+{
+	screen->width = -30;
+	screen->height = -30;
+
+	if(screen->width < 0 || screen->height < 0)
+	{
+		screen->height = w->ws_row - 1;
+		screen->width = w->ws_col;
+	}
+	
+	if(screen->width >= MAP_MAX_WIDTH)
+	{	
+		screen->width = MAP_MAX_WIDTH - 1;
+	}
+	if(screen->height >= MAP_MAX_HEIGHT)
+	{
+		screen->height = MAP_MAX_HEIGHT - 2;	// why -2, to disply scores.
+	}
+}
+
+int SetSnakeNextDirection(Snake * snake, int nextDirection_)
+{
+	snake->new_direction = nextDirection_;
+	return 0;
+}
+
+int GetSnakeNextDirection(Snake * snake)
+{
+	return snake->new_direction;
+}
+
+int SetSnakeSpeed(Snake * snake, int speed_)
+{
+	if (speed_ < 0)
+	{
+		return -1;
+	}
+
+	snake->speed = speed_;
+	return 0;
+}
+
+int GetSnakeSpeed(Snake * snake)
+{
+	return snake->speed;
+}
