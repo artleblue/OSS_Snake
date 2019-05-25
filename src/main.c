@@ -27,9 +27,6 @@ typedef struct Snake
 
 }Snake;
 
-int SetSnakeSize(Snake * snake, int size_);
-int GetSnakeSize(Snake * snake);
-
 typedef struct Screen
 {
 	int width;
@@ -37,6 +34,20 @@ typedef struct Screen
 
 }Screen;
 
+// Snake Functions
+
+int SetSnakeSize(Snake * snake, int size_);
+int GetSnakeSize(Snake * snake);
+
+int CheckSnakeCollision(Pos px, Snake * snake, Screen * screen);
+int CheckSnakeCollisionWithoutHead(Pos px, Snake * snake, Screen * screen);
+int SetSnakeInitPos(Snake * snake, const int SCREEN_WIDTH, const int SCREEN_HEIGHT);
+int MoveSnakePos(Snake * snake);
+
+//
+
+
+//
 typedef struct GameCondition
 {
 	int turbo;
@@ -125,33 +136,10 @@ void hud(Snake * snake)
 	printf("Score: %i | t - turbo | x - Quit the game | p - pause the game ", SCORES);
 }
 
-int check_snake_collision(Pos px, Snake * snake, Screen * screen)
-{
-    if (arena[px.x][px.y] != ' ')
-        return 1;
-    if (px.x < 1)
-        return 1;
-    if (px.y < 1)
-        return 1;
-    if (px.x > screen->width - 2)
-        return 1;
-    if (px.y > screen->height - 1)
-        return 1;
-
-    int remaining = -1;
-    while (remaining++ < GetSnakeSize(snake))
-    {
-        if (pos[remaining].x == px.x && pos[remaining].y == px.y)
-            return 1;
-    }
-
-    return 0;
-}
-
 void generate_food(Snake * snake, Screen * screen)
 {
     randomize_food(screen);
-    while (check_snake_collision(food_position,snake,screen))
+    while (CheckSnakeCollision(food_position,snake,screen))
         randomize_food(screen);
     // draw it
     MoveToPos(food_position.x, food_position.y);
@@ -223,8 +211,8 @@ void move_snake(Snake * snake, Screen * screen, GameCondition * condition)
 
     int respawn = 0;
 
-    if (check_snake_collision(head,snake,screen))
-    {
+    if (CheckSnakeCollision(head, snake, screen))
+	{
         game_over(screen,condition);
         return;
     }
@@ -259,22 +247,6 @@ void move_snake(Snake * snake, Screen * screen, GameCondition * condition)
     
 	 MoveToPos(screen->width, screen->height + 1);
     fflush(stdout);
-}
-
-void GenerateSnake(Snake * snake, Screen * screen)
-{
-	const int SNAKE_SIZE = GetSnakeSize(snake);
-	int start_x = screen->width / 2;
-	int start_y = screen->height / 2;
-	int remaining = -1;
-	
-	while (remaining++ < SNAKE_SIZE)
-	{
-		if(start_x < 0)
-			fatal("The screen is too small");
-		pos[remaining].x = start_x--;
-		pos[remaining].y = start_y;
-	}
 }
 
 void draw_snake(Snake * snake)
@@ -346,7 +318,44 @@ void play(Snake * snake, Screen * screen,GameCondition * condition)
 		  if (!(snake->new_direction == RIGHT && snake->direction == LEFT) && !(snake->new_direction == LEFT && snake->direction == RIGHT) &&
             !(snake->new_direction == UP && snake->direction == DOWN) && !(snake->new_direction == DOWN && snake->direction == UP))
             snake->direction = snake->new_direction;
-        move_snake(snake, screen,condition);
+      
+		// move_snake(snake, screen,condition);
+		MoveSnakePos(snake);
+	
+		Pos head = pos[0];
+		Pos tail = pos[GetSnakeSize(snake)];
+		if (CheckSnakeCollisionWithoutHead(head, snake, screen))
+		{
+			game_over(screen,condition);
+			return;
+		}
+		
+		// food eat
+		int respawn = 0;
+		if (head.x == food_position.x && head.y == food_position.y)
+		{
+			int SNAKE_SIZE = GetSnakeSize(snake);
+			
+			SNAKE_SIZE += 1;
+			SetSnakeSize(snake, SNAKE_SIZE);
+			hud(snake);
+			pos[SNAKE_SIZE].x = tail.x;
+			pos[SNAKE_SIZE].y = tail.y;
+			respawn = 1;
+		}
+		// food drop
+		if (respawn)
+		{
+			generate_food(snake, screen);
+		} 
+		else 
+		{
+			MoveToPos(food_position.x, food_position.y);
+			printf("%c", food);
+		}
+
+		MoveToPos(screen->width, screen->height + 1);
+		fflush(stdout);
     }
 }
 
@@ -374,8 +383,8 @@ void new_game(Snake * snake, Screen * screen)
         pos[current_pos].x = -10;
         pos[current_pos].y = -10;
     }
-    
-	 GenerateSnake(snake, screen);
+
+	SetSnakeInitPos(snake, screen->width, screen->height); 
 
     Clear();
     draw_map(screen);
@@ -474,4 +483,126 @@ int SetSnakeSize(Snake * snake, int size_)
 int GetSnakeSize(Snake * snake)
 {
 	return snake->size;
+}
+
+int CheckSnakeCollision(Pos px, Snake * snake, Screen * screen)
+{
+	const int SNAKE_SIZE = GetSnakeSize(snake);
+
+	if (arena[px.x][px.y] != ' ')
+	   return 1;
+	if (px.x < 1)
+	   return 1;
+	if (px.y < 1)
+	   return 1;
+	if (px.x > screen->width - 2)
+	   return 1;
+	if (px.y > screen->height - 1)
+		return 1;
+
+	int remaining = -1;
+	while (remaining++ < SNAKE_SIZE)
+	{
+		if (pos[remaining].x == px.x && pos[remaining].y == px.y)
+		   return 1;
+	}
+
+	return 0;
+}
+
+int CheckSnakeCollisionWithoutHead(Pos px, Snake * snake, Screen * screen)
+{
+	const int SNAKE_SIZE = GetSnakeSize(snake);
+
+	if (arena[px.x][px.y] != ' ')
+	   return 1;
+	if (px.x < 1)
+	   return 1;
+	if (px.y < 1)
+	   return 1;
+	if (px.x > screen->width - 2)
+	   return 1;
+	if (px.y > screen->height - 1)
+		return 1;
+
+	int remaining = 0;
+	while (remaining++ < SNAKE_SIZE)
+	{
+		if (pos[remaining].x == px.x && pos[remaining].y == px.y)
+		   return 1;
+	}
+
+	return 0;
+}
+int SetSnakeInitPos(Snake * snake, const int SCREEN_WIDTH, const int SCREEN_HEIGHT)
+{
+	const int SNAKE_SIZE = GetSnakeSize(snake);
+	int start_x = SCREEN_WIDTH / 2;
+	int start_y = SCREEN_HEIGHT / 2;
+	int remaining = -1;
+	
+	while (remaining++ < SNAKE_SIZE)
+	{
+		if(start_x < 0)
+			fatal("The screen is too small");
+		pos[remaining].x = start_x--;
+		pos[remaining].y = start_y;
+	}
+}
+
+int MoveSnakePos(Snake * snake)
+{
+   // Moves snake into a pos that snake is looking at
+   // return: when snake moves without erros, returns true.
+   // return: when snake can't move, return false.
+	const int SNAKE_SIZE = GetSnakeSize(snake);
+	int add_x = 0;
+	int add_y = 0;
+	
+	switch (snake->direction)
+	{
+		case RIGHT:
+		   add_x = 1;
+		   break;
+		case UP:
+		   add_y = 1;
+		   break;
+		case DOWN:
+		   add_y = -1;
+		   break;
+		case LEFT:
+		   add_x = -1;
+		   break;
+	}
+
+	Pos head = pos[0];
+	Pos tail = pos[SNAKE_SIZE];
+
+	MoveToPos(tail.x, tail.y);
+	printf(" ");
+
+	MoveToPos(head.x, head.y);
+	printf("%c", snake->SnakeChar);
+
+	int remaining = SNAKE_SIZE + 1;
+
+	while (--remaining > 0)
+	{
+		pos[remaining].x = pos[remaining-1].x;
+		pos[remaining].y = pos[remaining-1].y;
+	}
+
+	head.x += add_x;
+	head.y += add_y;
+
+	pos[0].x += add_x;
+	pos[0].y += add_y;
+
+	MoveToPos(pos[0].x, pos[0].y);
+	printf("%c", snake->SnakeChar_First);
+	
+	MoveToPos(pos[SNAKE_SIZE].x, pos[SNAKE_SIZE].y);
+	printf("%c", snake->SnakeChar_Tail);
+	
+	return 0;
 }
