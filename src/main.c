@@ -27,6 +27,12 @@ typedef struct Snake
 
 }Snake;
 
+typedef struct Food
+{
+	char DISPLAY_FOOD;
+	Pos pos;
+}Food;
+
 typedef struct Screen
 {
 	int width;
@@ -51,6 +57,20 @@ int CheckSnakeCollisionWithoutHead(Pos px, Snake * snake, Screen * screen);
 int SetSnakeInitPos(Snake * snake, const int SCREEN_WIDTH, const int SCREEN_HEIGHT);
 int MoveSnakePos(Snake * snake);
 
+// Food Functions
+void InitFood(Food * food);
+char GetFoodSymbol(Food * food);
+
+int SetFoodPos(Food * food, Pos pos_);
+Pos GetFoodPos(Food * food);
+
+
+//
+int LocateFood( Snake * snake, Food * food, Screen * screen );
+
+// Game System
+Pos GetRandomPos(int width, int height);
+
 // Display
 
 void InitScreen(Screen * screen, struct winsize * w);
@@ -70,7 +90,6 @@ typedef struct GameCondition
 const char food = '@';
 
 Pos pos[MAX_SIZE];
-Pos food_position;
 
 struct termios orig_term_attr;
 struct termios new_term_attr;
@@ -111,12 +130,6 @@ void fatal(char *reason)
     exit(1);
 }
 
-void randomize_food(Screen * screen)
-{
-    food_position.x = rand_lim(screen->width);
-    food_position.y = rand_lim(screen->height);
-}
-
 void draw_map(Screen * screen)
 {
     int x,y;
@@ -134,16 +147,6 @@ void draw_map(Screen * screen)
         } while (y++ < screen->height-1);
        x++;
     }
-}
-
-void generate_food(Snake * snake, Screen * screen)
-{
-    randomize_food(screen);
-    while (CheckSnakeCollision(food_position,snake,screen))
-        randomize_food(screen);
-    // draw it
-    MoveToPos(food_position.x, food_position.y);
-    printf("%c", food);
 }
 
 void game_over(Screen * screen, GameCondition * condition)
@@ -164,7 +167,7 @@ void game_over(Screen * screen, GameCondition * condition)
         condition->quit = 1;
 }
 
-void play(Snake * snake, Screen * screen,GameCondition * condition)
+void play(Snake * snake, Screen * screen,GameCondition * condition, Food * food)
 {
 	int WAIT_FOR_SECONDS = GetSnakeSpeed(snake) * 1000;
 
@@ -242,7 +245,8 @@ void play(Snake * snake, Screen * screen,GameCondition * condition)
 		
 		// food eat
 		int respawn = 0;
-		if (head.x == food_position.x && head.y == food_position.y)
+		Pos foodPos = GetFoodPos( food );
+		if (head.x == foodPos.x && head.y == foodPos.y)
 		{
 			int SNAKE_SIZE = GetSnakeSize(snake);
 			
@@ -256,12 +260,12 @@ void play(Snake * snake, Screen * screen,GameCondition * condition)
 		// food drop
 		if (respawn)
 		{
-			generate_food(snake, screen);
+			LocateFood( snake, food, screen );
 		} 
 		else 
 		{
-			MoveToPos(food_position.x, food_position.y);
-			printf("%c", food);
+			MoveToPos( foodPos.x, foodPos.y);
+			printf( "%c", GetFoodSymbol( food ) );
 		}
 
 		MoveToPos(screen->width, screen->height + 1);
@@ -270,13 +274,14 @@ void play(Snake * snake, Screen * screen,GameCondition * condition)
 }
 
 
-void new_game(Snake * snake, Screen * screen)
+void new_game( Snake * snake, Screen * screen, Food * food )
 {
     int ax = 0;
     int ay = 0;
     
-    SetSnakeSize(snake, 3);
-    
+    SetSnakeSize( snake, 3 );
+	InitFood( food );
+
 	do
 	{
         ay = 0;
@@ -298,7 +303,7 @@ void new_game(Snake * snake, Screen * screen)
 
     Clear();
     draw_map(screen);
-    generate_food(snake, screen);
+    LocateFood(snake, food, screen);
     DrawGameInfo(snake, screen);
 	draw_snake(snake);
 }
@@ -322,28 +327,29 @@ void SetTerminal(struct winsize * w)
 
 int main(int argc, char **argv)
 {
-	 Snake snake;
-	 Screen screen;
-	 GameCondition condition;
+	Snake snake;
+	Screen screen;
+	GameCondition condition;
+	Food food;
 
     struct winsize w;
 
     srand(time(NULL));
 
-	 InitSnake(&snake);
-	 InitGameCondition(&condition);
+	InitSnake(&snake);
+	InitGameCondition(&condition);
     
-	 SetTerminal(&w);
+	SetTerminal(&w);
 
-	 InitScreen(&screen, &w);
+	InitScreen(&screen, &w);
  
     tcsetattr(fileno(stdin), TCSANOW, &new_term_attr);
  
 	 while (condition.quit != 2)
     {
-        new_game(&snake,&screen);
+        new_game( &snake, &screen, &food );
         condition.quit = 0;
-        play(&snake,&screen,&condition);
+        play( &snake, &screen, &condition, &food );
     }
 
     Clear();
@@ -596,4 +602,56 @@ int SetSnakeSpeed(Snake * snake, int speed_)
 int GetSnakeSpeed(Snake * snake)
 {
 	return snake->speed;
+}
+
+   ///////////////////////////////// FOOD //////////////
+
+void InitFood(Food * food)
+{
+	food->DISPLAY_FOOD = '@';	
+}
+
+char GetFoodSymbol(Food * food)
+{
+	return food->DISPLAY_FOOD;
+}
+
+int SetFoodPos(Food * food, Pos pos_)
+{
+	food->pos = pos_;
+}
+Pos GetFoodPos(Food * food)
+{
+	return food->pos;
+}
+
+int LocateFood(Snake * snake, Food * food, Screen * screen)
+{
+	int count;
+	Pos pos;
+
+	pos = GetRandomPos(screen->width, screen->height);
+	count = 0;
+	while ( CheckSnakeCollision(pos, snake, screen)
+		    && count++ <= 50 )
+	{
+		pos = GetRandomPos(screen->width, screen->height);
+	}
+	SetFoodPos(food, pos);
+
+	// Draw food
+    MoveToPos(pos.x, pos.y);
+    printf("%c", GetFoodSymbol(food));
+
+	return 0;
+}
+
+////////////////////////////////////////////////////////
+
+Pos GetRandomPos(int width, int height)
+{	
+	Pos pos;
+	pos.x = rand_lim(width);
+	pos.y = rand_lim(height);
+	return pos;
 }
