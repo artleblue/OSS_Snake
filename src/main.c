@@ -6,36 +6,17 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include "location.h"
+#include "snake.h"
+#include "food.h"
 #include <stdbool.h>
 
-#define MAX_SIZE   800
 #define MAP_MAX_WIDTH  300
 #define MAP_MAX_HEIGHT 300
 
 
-
 const enum Dir {LEFT, RIGHT, UP, DOWN};
 
-typedef struct Snake
-{
-	char SnakeChar_First;
-	char SnakeChar;
-	char SnakeChar_Tail;
-	
-	int size;
-	int speed;
-	int direction;
-	int new_direction;
-	
-	Pos pos[ MAX_SIZE ];
 
-}Snake;
-
-typedef struct Food
-{
-	char DISPLAY_FOOD;
-	Pos pos;
-}Food;
 
 typedef struct Screen
 {
@@ -110,7 +91,6 @@ struct termios new_term_attr;
 char arena[MAP_MAX_HEIGHT][MAP_MAX_WIDTH];
 
 
-
 int main(int argc, char **argv)
 {
 	Snake snake;
@@ -118,9 +98,9 @@ int main(int argc, char **argv)
 	GameCondition condition;
 	Food food;
 
-    struct winsize w;
+    	struct winsize w;
 
-    srand(time(NULL));
+    	srand(time(NULL));
 
 	InitSnake(&snake);
 	InitGameCondition(&condition);
@@ -129,19 +109,19 @@ int main(int argc, char **argv)
 
 	InitScreen(&screen, &w);
  
-    tcsetattr(fileno(stdin), TCSANOW, &new_term_attr);
+   	 tcsetattr(fileno(stdin), TCSANOW, &new_term_attr);
  
-	 while (condition.quit != 2)
-    {
-        new_game( &snake, &screen, &food );
-        condition.quit = 0;
-        play( &snake, &screen, &condition, &food );
-    }
+	while (condition.quit != 2)
+    	{
+       	 	new_game( &snake, &screen, &food );
+        	condition.quit = 0;
+        	play( &snake, &screen, &condition, &food );
+    	}	
 
-    Clear();
-    tcsetattr(fileno(stdin), TCSANOW, &orig_term_attr);
+    	Clear();
+    	tcsetattr(fileno(stdin), TCSANOW, &orig_term_attr);
     
-	 return 0;
+	return 0;
 }
 
 
@@ -149,12 +129,12 @@ int main(int argc, char **argv)
 
 void SetTerminal(struct winsize * w)
 {
-	 tcgetattr(fileno(stdin), &orig_term_attr);
-    memcpy(&new_term_attr, &orig_term_attr, sizeof(struct termios));
-    new_term_attr.c_lflag &= ~(ECHO|ICANON);
-    new_term_attr.c_cc[VTIME] = 0;
-    new_term_attr.c_cc[VMIN] = 0;
-    ioctl(STDOUT_FILENO, TIOCGWINSZ, w);
+	tcgetattr(fileno(stdin), &orig_term_attr);
+    	memcpy(&new_term_attr, &orig_term_attr, sizeof(struct termios));
+    	new_term_attr.c_lflag &= ~(ECHO|ICANON);
+    	new_term_attr.c_cc[VTIME] = 0;
+   	new_term_attr.c_cc[VMIN] = 0;
+    	ioctl(STDOUT_FILENO, TIOCGWINSZ, w);
 }
 
 
@@ -170,7 +150,7 @@ void new_game( Snake * snake, Screen * screen, Food * food )
     int ax = 0;
     int ay = 0;
     
-    SetSnakeSize( snake, 3 );
+    	SetSnakeSize( snake, 3 );
 	InitFood( food );
 
 	do
