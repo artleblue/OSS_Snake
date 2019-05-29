@@ -42,6 +42,14 @@ typedef struct Screen
 
 }Screen;
 
+typedef struct GameCondition
+{
+	int turbo;
+	int paused;
+	int quit;
+
+}GameCondition;
+
 // Snake Functions
 void InitSnake(Snake * snake);
 
@@ -67,47 +75,22 @@ int SetFoodPos(Food * food, Pos pos_);
 Pos GetFoodPos(Food * food);
 
 
-//
-int LocateFood( Snake * snake, Food * food, Screen * screen );
 
 // Game System
 Pos GetRandomPos(int width, int height);
+int LocateFood( Snake * snake, Food * food, Screen * screen );
 
 // Display
-
 void InitScreen(Screen * screen, struct winsize * w);
-
+void Clear();
+void MoveToPos(int x, int y);
 void draw_snake(Snake * snake);
 void DrawGameInfo(Snake * snake, Screen * screen);
-
-//
-typedef struct GameCondition
-{
-	int turbo;
-	int paused;
-	int quit;
-
-}GameCondition;
-
-const char food = '@';
-
-//Pos pos[MAX_SIZE];
 
 struct termios orig_term_attr;
 struct termios new_term_attr;
 
 char arena[MAP_MAX_HEIGHT][MAP_MAX_WIDTH];
-
-
-void Clear()
-{
-	printf("\033[H\033[J");
-}
-
-void MoveToPos(int x, int y)
-{
-	printf("\033[%d;%dH",(y+1),(x+1));
-}
 
 int rand_lim(int limit)
 {
@@ -671,4 +654,16 @@ Pos GetRandomPos(int width, int height)
 	pos.x = rand_lim(width);
 	pos.y = rand_lim(height);
 	return pos;
+}
+
+
+void Clear()
+{
+	printf("\033[H\033[J");
+}
+
+
+void MoveToPos(int x, int y)
+{
+	printf("\033[%d;%dH",(y+1),(x+1));
 }
