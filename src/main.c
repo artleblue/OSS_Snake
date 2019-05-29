@@ -12,6 +12,8 @@
 #define MAP_MAX_WIDTH  300
 #define MAP_MAX_HEIGHT 300
 
+
+
 const enum Dir {LEFT, RIGHT, UP, DOWN};
 
 typedef struct Snake
@@ -50,6 +52,7 @@ typedef struct GameCondition
 
 }GameCondition;
 
+
 // Snake Functions
 void InitSnake(Snake * snake);
 
@@ -61,11 +64,12 @@ int SetSnakeNextDirection(Snake * snake, int nextDirection_);
 int GetSnakeNextDirection(Snake * snake);
 int SetSnakeSpeed(Snake * snake, int speed_);
 int GetSnakeSpeed(Snake * snake);
+int MoveSnakePos(Snake * snake);
 
 int CheckSnakeCollision(Pos px, Snake * snake, Screen * screen);
 int CheckSnakeCollisionWithoutHead(Pos px, Snake * snake, Screen * screen);
 int SetSnakeInitPos(Snake * snake, const int SCREEN_WIDTH, const int SCREEN_HEIGHT);
-int MoveSnakePos(Snake * snake);
+
 
 // Food Functions
 void InitFood(Food * food);
@@ -75,10 +79,17 @@ int SetFoodPos(Food * food, Pos pos_);
 Pos GetFoodPos(Food * food);
 
 
-
 // Game System
 Pos GetRandomPos(int width, int height);
 int LocateFood( Snake * snake, Food * food, Screen * screen );
+int rand_lim(int limit);
+void play(Snake * snake, Screen * screen,GameCondition * condition, Food * food);
+int fetch_key();
+void fatal(char *reason);
+void game_over(Screen * screen, GameCondition * condition);
+void new_game( Snake * snake, Screen * screen, Food * food );
+void InitGameCondition(GameCondition * condition);
+
 
 // Display
 void InitScreen(Screen * screen, struct winsize * w);
@@ -86,52 +97,105 @@ void Clear();
 void MoveToPos(int x, int y);
 void draw_snake(Snake * snake);
 void DrawGameInfo(Snake * snake, Screen * screen);
+void draw_map(Screen * screen);
+
+
+//Terminal
+void SetTerminal(struct winsize * w);
+
 
 struct termios orig_term_attr;
 struct termios new_term_attr;
 
 char arena[MAP_MAX_HEIGHT][MAP_MAX_WIDTH];
 
-int rand_lim(int limit)
+
+
+int main(int argc, char **argv)
 {
-    int divisor = RAND_MAX/(limit+1);
-    int retval;
+	Snake snake;
+	Screen screen;
+	GameCondition condition;
+	Food food;
 
-    do { 
-        retval = rand() / divisor;
-    } while (retval > limit);
+    struct winsize w;
 
-    return retval;
-}
+    srand(time(NULL));
 
-int fetch_key()
-{
-    return fgetc(stdin);
-}
+	InitSnake(&snake);
+	InitGameCondition(&condition);
+    
+	SetTerminal(&w);
 
-void fatal(char *reason)
-{
-    printf("FATAL: %s\n", reason);
-    exit(1);
-}
-
-void draw_map(Screen * screen)
-{
-    int x,y;
-    x = 0;
-    while (x-1 < screen->width)
+	InitScreen(&screen, &w);
+ 
+    tcsetattr(fileno(stdin), TCSANOW, &new_term_attr);
+ 
+	 while (condition.quit != 2)
     {
-        y = 0;
-        do {
-            if (x == 0 || y == 0 || x >= screen->width || y >= screen->height-1)
-            {
-                arena[x][y] = '*';
-                MoveToPos(x,y);
-                printf("*");
-            }
-        } while (y++ < screen->height-1);
-       x++;
+        new_game( &snake, &screen, &food );
+        condition.quit = 0;
+        play( &snake, &screen, &condition, &food );
     }
+
+    Clear();
+    tcsetattr(fileno(stdin), TCSANOW, &orig_term_attr);
+    
+	 return 0;
+}
+
+
+
+
+void SetTerminal(struct winsize * w)
+{
+	 tcgetattr(fileno(stdin), &orig_term_attr);
+    memcpy(&new_term_attr, &orig_term_attr, sizeof(struct termios));
+    new_term_attr.c_lflag &= ~(ECHO|ICANON);
+    new_term_attr.c_cc[VTIME] = 0;
+    new_term_attr.c_cc[VMIN] = 0;
+    ioctl(STDOUT_FILENO, TIOCGWINSZ, w);
+}
+
+
+void InitGameCondition(GameCondition * condition)
+{
+	condition->paused = 0;
+	condition->quit = 0;
+	condition->turbo = 0;
+}
+
+void new_game( Snake * snake, Screen * screen, Food * food )
+{
+    int ax = 0;
+    int ay = 0;
+    
+    SetSnakeSize( snake, 3 );
+	InitFood( food );
+
+	do
+	{
+        ay = 0;
+        do
+        {
+            arena[ax][ay] = ' ';
+        } while (++ay < MAP_MAX_WIDTH);
+    } while (++ax < MAP_MAX_HEIGHT);
+  
+
+	for ( int i = 0; i < MAX_SIZE; i++ )
+	{
+		snake->pos[i].x = -10;
+		snake->pos[i].y = -10;
+	}
+
+	SetSnakeInitPos(snake, screen->width, screen->height); 
+
+    Clear();
+    draw_map(screen);
+    LocateFood(snake, food, screen);
+    DrawGameInfo(snake, screen);
+	draw_snake(snake);
 }
 
 void game_over(Screen * screen, GameCondition * condition)
@@ -150,6 +214,17 @@ void game_over(Screen * screen, GameCondition * condition)
         condition->quit = 2;
     else
         condition->quit = 1;
+}
+
+int fetch_key()
+{
+    return fgetc(stdin);
+}
+
+void fatal(char *reason)
+{
+    printf("FATAL: %s\n", reason);
+    exit(1);
 }
 
 void play(Snake * snake, Screen * screen,GameCondition * condition, Food * food)
@@ -259,89 +334,36 @@ void play(Snake * snake, Screen * screen,GameCondition * condition, Food * food)
 }
 
 
-void new_game( Snake * snake, Screen * screen, Food * food )
+void draw_map(Screen * screen)
 {
-    int ax = 0;
-    int ay = 0;
-    
-    SetSnakeSize( snake, 3 );
-	InitFood( food );
-
-	do
-	{
-        ay = 0;
-        do
-        {
-            arena[ax][ay] = ' ';
-        } while (++ay < MAP_MAX_WIDTH);
-    } while (++ax < MAP_MAX_HEIGHT);
-  
-
-	for ( int i = 0; i < MAX_SIZE; i++ )
-	{
-		snake->pos[i].x = -10;
-		snake->pos[i].y = -10;
-	}
-
-	SetSnakeInitPos(snake, screen->width, screen->height); 
-
-    Clear();
-    draw_map(screen);
-    LocateFood(snake, food, screen);
-    DrawGameInfo(snake, screen);
-	draw_snake(snake);
-}
-
-void InitGameCondition(GameCondition * condition)
-{
-	condition->paused = 0;
-	condition->quit = 0;
-	condition->turbo = 0;
-}
-
-void SetTerminal(struct winsize * w)
-{
-	 tcgetattr(fileno(stdin), &orig_term_attr);
-    memcpy(&new_term_attr, &orig_term_attr, sizeof(struct termios));
-    new_term_attr.c_lflag &= ~(ECHO|ICANON);
-    new_term_attr.c_cc[VTIME] = 0;
-    new_term_attr.c_cc[VMIN] = 0;
-    ioctl(STDOUT_FILENO, TIOCGWINSZ, w);
-}
-
-int main(int argc, char **argv)
-{
-	Snake snake;
-	Screen screen;
-	GameCondition condition;
-	Food food;
-
-    struct winsize w;
-
-    srand(time(NULL));
-
-	InitSnake(&snake);
-	InitGameCondition(&condition);
-    
-	SetTerminal(&w);
-
-	InitScreen(&screen, &w);
- 
-    tcsetattr(fileno(stdin), TCSANOW, &new_term_attr);
- 
-	 while (condition.quit != 2)
+    int x,y;
+    x = 0;
+    while (x-1 < screen->width)
     {
-        new_game( &snake, &screen, &food );
-        condition.quit = 0;
-        play( &snake, &screen, &condition, &food );
+        y = 0;
+        do {
+            if (x == 0 || y == 0 || x >= screen->width || y >= screen->height-1)
+            {
+                arena[x][y] = '*';
+                MoveToPos(x,y);
+                printf("*");
+            }
+        } while (y++ < screen->height-1);
+       x++;
     }
-
-    Clear();
-    tcsetattr(fileno(stdin), TCSANOW, &orig_term_attr);
-    
-	 return 0;
 }
 
+int rand_lim(int limit)
+{
+    int divisor = RAND_MAX/(limit+1);
+    int retval;
+
+    do { 
+        retval = rand() / divisor;
+    } while (retval > limit);
+
+    return retval;
+}
 
 int SetSnakeSize(Snake * snake, int size_)
 {
