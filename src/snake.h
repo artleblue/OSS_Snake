@@ -4,6 +4,7 @@
 #include "food.h"
 #include "screen.h"
 
+
 #define MAX_SIZE   800
 
 typedef struct Snake
@@ -220,7 +221,7 @@ int SetSnakeInitPos(Snake * snake, const int SCREEN_WIDTH, const int SCREEN_HEIG
 	{
 		if ( start_x < 0 )
 		{
-			fatal("The screen is too small.");
+			Fatal("The screen is too small.");
 		}
 		snake->pos[i].x = start_x--;
 		snake->pos[i].y = start_y;

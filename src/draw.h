@@ -4,7 +4,7 @@
 #include "screen.h"
 #include "snake.h"
 
-void draw_snake(Snake * snake)
+void DrawSnake(Snake * snake)
 {
 	const int SNAKE_SIZE = GetSnakeSize(snake); 
     int remaining = -1;
@@ -38,7 +38,7 @@ void DrawGameInfo(Snake * snake, Screen * screen)
 	printf("Score: %i | t - turbo | x - Quit the game | p - pause the game ", SCORES);
 }
 
-void draw_map(Screen * screen)
+void DrawMap(Screen * screen)
 {
     int x,y;
     x = 0;
