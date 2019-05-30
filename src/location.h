@@ -1,3 +1,7 @@
+/*
+ * 위치 정보와 방향정보를 포함하는 헤더.
+ */
+
 #ifndef __LOCATION_H_
 #define __LOCATION_H_
 

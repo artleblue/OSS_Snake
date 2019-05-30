@@ -1,3 +1,11 @@
+/*
+ * 뱀의 정보를 가지고 있으며
+ * 뱀의 길이, 속도, 방향을 설정하거나 반환,
+ * 뱀의 충돌을 검사하는 함수를 포함하는 헤더.
+ *
+ * 스크린의 정보인 screen.h와 위치정보인 location.h를 포함하고 있다.
+ */
+
 #ifndef __SNAKE_H_
 #define __SNAKE_H_
 
@@ -7,6 +15,7 @@
 #define MAX_SIZE   800
 
 
+/*뱀의 정보*/
 typedef struct Snake
 {
 	char SnakeChar_First;
@@ -35,6 +44,6 @@ int GetSnakeSpeed( Snake * snake );
 int MoveSnakePos( Snake * snake );
 int CheckSnakeCollision( Pos px, Snake * snake, Screen * screen );
 int CheckSnakeCollisionWithoutHead( Pos px, Snake * snake, Screen * screen );
-int SetSnakeInitPos( Snake * snake, const int SCREEN_WIDTH, const int SCREEN_HEIGHT );
+void SetSnakeInitPos( Snake * snake, const int SCREEN_WIDTH, const int SCREEN_HEIGHT );
 
 #endif

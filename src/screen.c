@@ -2,6 +2,7 @@
 #include <sys/ioctl.h>
 #include "screen.h"
 
+/*윈도우 크기에 따라 스크린을 출력하는 함수.*/
 void InitScreen( Screen * screen, struct winsize * w )
 {
 	screen->width = -30;
@@ -20,16 +21,18 @@ void InitScreen( Screen * screen, struct winsize * w )
 
 	if( screen->height >= MAP_MAX_HEIGHT )
 	{
-		screen->height = MAP_MAX_HEIGHT - 2;	// why -2, to disply scores.
+		screen->height = MAP_MAX_HEIGHT - 2;
 	}
 }
 
+/*커서를 화면 시작부분에 위치시키고 화면을 지우는 함수.*/
 void Clear()
 {
-	printf( "\033[H\033[J" );
+	printf( "\033[H\033[J" ); // ANSI 코드
 }
 
+/*지정 위치에 글자를 출력하는 함수.*/
 void MoveToPos( int x, int y )
 {
-	printf( "\033[%d;%dH", ( y + 1 ), ( x + 1 ) );
+	printf( "\033[%d;%dH", ( y + 1 ), ( x + 1 ) ); // ANSI 코드
 }

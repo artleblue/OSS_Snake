@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include "snake.h"
 
+/*뱀에 대한 기호 대입, 뱀의 길이와 속도 결정, 뱀의 방향 결정을 맡은 함수.*/
 void InitSnake( Snake * snake )
 {
 	snake->SnakeChar_First = 'O';
@@ -20,16 +21,22 @@ void InitSnake( Snake * snake )
 	SetSnakeDirection( snake, RIGHT );
 }
 
+/*뱀의 길이를 바꾸는 함수.*/
 int SetSnakeSize( Snake * snake, int size_ )
 {
 	snake->size = size_;
 }
+
 
 int GetSnakeSize( Snake * snake )
 {
 	return snake->size;
 }
 
+/*뱀의 방향을 정하는 함수
+ 
+ 인자로 받은 방향으로 뱀의 방향을 설정한다.
+ */
 int SetSnakeDirection( Snake * snake, int direction_ )
 {
 	if ( direction_ != RIGHT
@@ -50,6 +57,10 @@ int GetSnakeDirection( Snake * snake )
 	return snake->direction;
 }
 
+/*뱀이 다음으로 움직일 방향을 정하는 함수
+ 
+ 인자로 받은 방향으로 뱀의 미래의 방향을 설정한다.
+ */
 int SetSnakeNextDirection( Snake * snake, int nextDirection_ )
 {
 	snake->new_direction = nextDirection_;
@@ -62,6 +73,10 @@ int GetSnakeNextDirection( Snake * snake )
 	return snake->new_direction;
 }
 
+/*뱀의 속도를 정하는 함수
+ 
+ 인자로 받은 속도로 뱀의 속도를 설정한다.
+ */
 int SetSnakeSpeed( Snake * snake, int speed_ )
 {
 	if ( speed_ < 0 )
@@ -79,13 +94,16 @@ int GetSnakeSpeed( Snake * snake )
 	return snake->speed;
 }
 
+/*뱀이 바라보는 방향으로 뱀을 움직이는 함수.
+ 
+ 뱀이 오류없이 움직인다면 true를 반환하고,
+ 뱀이 움직일 수 없다면 false를 반환한다.
+ */
 int MoveSnakePos( Snake * snake )
 {
-   // Moves snake into a pos that snake is looking at
-   // return: when snake moves without erros, returns true.
-   // return: when snake can't move, return false.
 	const int SNAKE_SIZE = GetSnakeSize( snake );
 	const int SNAKE_DIRECTION = GetSnakeDirection( snake );
+
 	int add_x = 0;
 	int add_y = 0;
 	
@@ -118,7 +136,6 @@ int MoveSnakePos( Snake * snake )
 	MoveToPos( head.x, head.y );
 	printf( "%c", snake->SnakeChar );
 
-	// why it is not snakesize -1
 	for ( int i = SNAKE_SIZE ; i > 0 ; i-- )
 	{
 		snake->pos[i].x = snake->pos[i-1].x;
@@ -141,6 +158,7 @@ int MoveSnakePos( Snake * snake )
 }
 
 
+/*머리를 포함한 뱀이 주어진 위치와 충돌하였는지 검사하는 함수.*/
 int CheckSnakeCollision( Pos px, Snake * snake, Screen * screen )
 {
 	const int SNAKE_SIZE = GetSnakeSize( snake );
@@ -178,6 +196,8 @@ int CheckSnakeCollision( Pos px, Snake * snake, Screen * screen )
 	return 0;
 }
 
+
+/*뱀의 몸통이 주어진 위치와 충돌하였는지 검사하는 함수*/
 int CheckSnakeCollisionWithoutHead( Pos px, Snake * snake, Screen * screen )
 {
 	const int SNAKE_SIZE = GetSnakeSize( snake );
@@ -216,15 +236,18 @@ int CheckSnakeCollisionWithoutHead( Pos px, Snake * snake, Screen * screen )
 	return 0;
 }
 
-int SetSnakeInitPos( Snake * snake, const int SCREEN_WIDTH, const int SCREEN_HEIGHT )
+
+void SetSnakeInitPos( Snake * snake, const int SCREEN_WIDTH, const int SCREEN_HEIGHT )
 {
 	const int SNAKE_SIZE = GetSnakeSize( snake );
+
 	int start_x = SCREEN_WIDTH / 2;
 	int start_y = SCREEN_HEIGHT / 2;
 	
+
 	for ( int i = 0 ; i < SNAKE_SIZE ; i++)
 	{
-		if ( start_x < 0 )
+		if ( start_x < 0 ) // 스크린이 너무 작을 경우
 		{
 			Fatal( "The screen is too small." );
 		}

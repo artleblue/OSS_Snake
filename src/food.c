@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include "food.h"
 
-
+/*음식의 기호를 초기화하는 함수*/
 void InitFood( Food * food )
 {
 	food->DISPLAY_FOOD = '@';	
