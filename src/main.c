@@ -6,10 +6,8 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <stdbool.h>
-#include "location.h"
-#include "snake.h"
+
 #include "food.h"
-#include "draw.h"
 #include "terminal.h"
 #include "gamesystem.h"
 

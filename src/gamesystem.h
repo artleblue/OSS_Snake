@@ -1,8 +1,6 @@
 #ifndef __GAMESYSTEM_H_
 #define __GAMESYSTEM_H_
 
-#include "location.h"
-#include "snake.h"
 #include "draw.h"
 
 

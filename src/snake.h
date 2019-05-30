@@ -1,7 +1,7 @@
 #ifndef __SNAKE_H_
 #define __SNAKE_H_
 
-#include "food.h"
+#include "location.h"
 #include "screen.h"
 
 #define MAX_SIZE   800

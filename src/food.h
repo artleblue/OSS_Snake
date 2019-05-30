@@ -11,24 +11,9 @@ typedef struct Food
 }Food;
 
 
-void InitFood( Food * food )
-{
-	food->DISPLAY_FOOD = '@';	
-}
-
-char GetFoodSymbol( Food * food )
-{
-	return food->DISPLAY_FOOD;
-}
-
-void SetFoodPos( Food * food, Pos pos_ )
-{
-	food->pos = pos_;
-}
-
-Pos GetFoodPos( Food * food )
-{
-	return food->pos;
-}
+void InitFood( Food * food );
+char GetFoodSymbol( Food * food );
+void SetFoodPos( Food * food, Pos pos_ );
+Pos GetFoodPos( Food * food );
 
 #endif
