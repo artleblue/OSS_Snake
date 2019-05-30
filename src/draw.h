@@ -1,7 +1,6 @@
 #ifndef __DRAW_H_
 #define __DRAW_H_
 
-#include "screen.h"
 #include "snake.h"
 
 

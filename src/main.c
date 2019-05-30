@@ -8,7 +8,6 @@
 #include <stdbool.h>
 #include "location.h"
 #include "snake.h"
-#include "screen.h"
 #include "food.h"
 #include "draw.h"
 #include "terminal.h"

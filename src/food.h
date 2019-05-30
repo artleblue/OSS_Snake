@@ -2,7 +2,6 @@
 #define __FOOD_H_
 
 #include "location.h"
-#include "snake.h"
 
 
 typedef struct Food

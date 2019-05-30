@@ -1,11 +1,9 @@
 #ifndef __SCREEN_H_
 #define __SCREEN_H_
 
-#include "location.h"
-#include "snake.h"
-
 #define MAP_MAX_WIDTH  300
 #define MAP_MAX_HEIGHT 300
+
 
 typedef struct Screen
 {

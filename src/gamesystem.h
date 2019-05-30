@@ -3,7 +3,6 @@
 
 #include "location.h"
 #include "snake.h"
-#include "screen.h"
 #include "draw.h"
 
 
