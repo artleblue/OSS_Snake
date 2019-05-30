@@ -7,7 +7,6 @@
 #include <unistd.h>
 #include <stdbool.h>
 
-#include "food.h"
 #include "terminal.h"
 #include "gamesystem.h"
 
