@@ -5,25 +5,14 @@
 #include <sys/ioctl.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <stdbool.h>
 #include "location.h"
 #include "snake.h"
+#include "screen.h"
 #include "food.h"
-#include <stdbool.h>
-
-#define MAP_MAX_WIDTH  300
-#define MAP_MAX_HEIGHT 300
+#include "draw.h"
 
 
-const enum Dir {LEFT, RIGHT, UP, DOWN};
-
-
-
-typedef struct Screen
-{
-	int width;
-	int height;
-
-}Screen;
 
 typedef struct GameCondition
 {
@@ -32,32 +21,6 @@ typedef struct GameCondition
 	int quit;
 
 }GameCondition;
-
-
-// Snake Functions
-void InitSnake(Snake * snake);
-
-int SetSnakeSize(Snake * snake, int size_);
-int GetSnakeSize(Snake * snake);
-int SetSnakeDirection(Snake * snake, int direction_);
-int GetSnakeDirection(Snake * snake);
-int SetSnakeNextDirection(Snake * snake, int nextDirection_);
-int GetSnakeNextDirection(Snake * snake);
-int SetSnakeSpeed(Snake * snake, int speed_);
-int GetSnakeSpeed(Snake * snake);
-int MoveSnakePos(Snake * snake);
-
-int CheckSnakeCollision(Pos px, Snake * snake, Screen * screen);
-int CheckSnakeCollisionWithoutHead(Pos px, Snake * snake, Screen * screen);
-int SetSnakeInitPos(Snake * snake, const int SCREEN_WIDTH, const int SCREEN_HEIGHT);
-
-
-// Food Functions
-void InitFood(Food * food);
-char GetFoodSymbol(Food * food);
-
-int SetFoodPos(Food * food, Pos pos_);
-Pos GetFoodPos(Food * food);
 
 
 // Game System
@@ -71,16 +34,6 @@ void game_over(Screen * screen, GameCondition * condition);
 void new_game( Snake * snake, Screen * screen, Food * food );
 void InitGameCondition(GameCondition * condition);
 
-
-// Display
-void InitScreen(Screen * screen, struct winsize * w);
-void Clear();
-void MoveToPos(int x, int y);
-void draw_snake(Snake * snake);
-void DrawGameInfo(Snake * snake, Screen * screen);
-void draw_map(Screen * screen);
-
-
 //Terminal
 void SetTerminal(struct winsize * w);
 
@@ -88,7 +41,7 @@ void SetTerminal(struct winsize * w);
 struct termios orig_term_attr;
 struct termios new_term_attr;
 
-char arena[MAP_MAX_HEIGHT][MAP_MAX_WIDTH];
+
 
 
 int main(int argc, char **argv)
@@ -171,10 +124,10 @@ void new_game( Snake * snake, Screen * screen, Food * food )
 
 	SetSnakeInitPos(snake, screen->width, screen->height); 
 
-    Clear();
-    draw_map(screen);
-    LocateFood(snake, food, screen);
-    DrawGameInfo(snake, screen);
+    	Clear();
+    	draw_map(screen);
+    	LocateFood(snake, food, screen);
+    	DrawGameInfo(snake, screen);
 	draw_snake(snake);
 }
 
@@ -220,29 +173,29 @@ void play(Snake * snake, Screen * screen,GameCondition * condition, Food * food)
             switch (key)
             {
                 case 116:
-                    condition->turbo = !condition->turbo;
-					if (condition->turbo)
-					{
-						SetSnakeSpeed(snake, 8);
-					}
-					else
-					{
-						SetSnakeSpeed(snake, 80);
-					}
-					WAIT_FOR_SECONDS = GetSnakeSpeed(snake) * 1000;
-					break;
+                	condition->turbo = !condition->turbo;
+			if (condition->turbo)
+			{
+				SetSnakeSpeed(snake, 8);
+			}
+			else
+			{
+				SetSnakeSpeed(snake, 80);
+			}
+			WAIT_FOR_SECONDS = GetSnakeSpeed(snake) * 1000;
+			break;
                 case 65:
-					SetSnakeNextDirection(snake, DOWN);
-                    break;
+			SetSnakeNextDirection(snake, DOWN);
+                    	break;
                 case 66:
-					SetSnakeNextDirection(snake, UP);
-                    break;
+			SetSnakeNextDirection(snake, UP);
+                 	break;
                 case 67:
-					SetSnakeNextDirection(snake, RIGHT);
-					break;
+			SetSnakeNextDirection(snake, RIGHT);
+			break;
                 case 68:
-					SetSnakeNextDirection(snake, LEFT);
-					break;
+			SetSnakeNextDirection(snake, LEFT);
+			break;
                 case 112:
                     if (condition->paused)
                         condition->paused = 0;
@@ -254,10 +207,10 @@ void play(Snake * snake, Screen * screen,GameCondition * condition, Food * food)
                     break;
             }
            
-				key = fetch_key();
+		key = fetch_key();
         }
        
-		if (condition->quit)
+	if (condition->quit)
             return;
         if (condition->paused)
             continue;
@@ -313,26 +266,6 @@ void play(Snake * snake, Screen * screen,GameCondition * condition, Food * food)
     }
 }
 
-
-void draw_map(Screen * screen)
-{
-    int x,y;
-    x = 0;
-    while (x-1 < screen->width)
-    {
-        y = 0;
-        do {
-            if (x == 0 || y == 0 || x >= screen->width || y >= screen->height-1)
-            {
-                arena[x][y] = '*';
-                MoveToPos(x,y);
-                printf("*");
-            }
-        } while (y++ < screen->height-1);
-       x++;
-    }
-}
-
 int rand_lim(int limit)
 {
     int divisor = RAND_MAX/(limit+1);
@@ -345,287 +278,8 @@ int rand_lim(int limit)
     return retval;
 }
 
-int SetSnakeSize(Snake * snake, int size_)
-{
-	snake->size = size_;
-}
-
-int GetSnakeSize(Snake * snake)
-{
-	return snake->size;
-}
-
-int CheckSnakeCollision(Pos px, Snake * snake, Screen * screen)
-{
-	const int SNAKE_SIZE = GetSnakeSize(snake);
-
-	if (arena[px.x][px.y] != ' ')
-	   return 1;
-	if (px.x < 1)
-	   return 1;
-	if (px.y < 1)
-	   return 1;
-	if (px.x > screen->width - 2)
-	   return 1;
-	if (px.y > screen->height - 1)
-		return 1;
-
-
-	for ( int i = 0; i < SNAKE_SIZE; i++ )
-	{
-		if ( snake->pos[i].x == px.x
-			  && snake->pos[i].y == px.y )
-		{
-			return 1;
-		}
-	}
-
-	return 0;
-}
-
-int CheckSnakeCollisionWithoutHead(Pos px, Snake * snake, Screen * screen)
-{
-	const int SNAKE_SIZE = GetSnakeSize(snake);
-
-	if (arena[px.x][px.y] != ' ')
-	   return 1;
-	if (px.x < 1)
-	   return 1;
-	if (px.y < 1)
-	   return 1;
-	if (px.x > screen->width - 2)
-	   return 1;
-	if (px.y > screen->height - 1)
-		return 1;
-
-	for ( int i = 1; i < SNAKE_SIZE; i++ )
-	{
-		
-		if ( snake->pos[i].x == px.x
-			  && snake->pos[i].y == px.y )
-		{
-			return 1;
-		}
-	}
-
-	return 0;
-}
-int SetSnakeInitPos(Snake * snake, const int SCREEN_WIDTH, const int SCREEN_HEIGHT)
-{
-	const int SNAKE_SIZE = GetSnakeSize(snake);
-	int start_x = SCREEN_WIDTH / 2;
-	int start_y = SCREEN_HEIGHT / 2;
-	
-	for ( int i = 0; i < SNAKE_SIZE; i++)
-	{
-		if ( start_x < 0 )
-		{
-			fatal("The screen is too small.");
-		}
-		snake->pos[i].x = start_x--;
-		snake->pos[i].y = start_y;
-	}
-}
-
-int MoveSnakePos(Snake * snake)
-{
-   // Moves snake into a pos that snake is looking at
-   // return: when snake moves without erros, returns true.
-   // return: when snake can't move, return false.
-	const int SNAKE_SIZE = GetSnakeSize(snake);
-	const int SNAKE_DIRECTION = GetSnakeDirection(snake);
-	int add_x = 0;
-	int add_y = 0;
-	
-
-	switch (SNAKE_DIRECTION)
-	{
-		case RIGHT:
-		   add_x = 1;
-		   break;
-		case UP:
-		   add_y = 1;
-		   break;
-		case DOWN:
-		   add_y = -1;
-		   break;
-		case LEFT:
-		   add_x = -1;
-		   break;
-	}
-
-	Pos head = (snake->pos)[0];
-	Pos tail = (snake->pos)[SNAKE_SIZE];
-
-	MoveToPos(tail.x, tail.y);
-	printf(" ");
-
-	MoveToPos(head.x, head.y);
-	printf("%c", snake->SnakeChar);
-
-	// why it is not snakesize -1
-	for ( int i = SNAKE_SIZE; i > 0; i-- )
-	{
-		snake->pos[i].x = snake->pos[i-1].x;
-		snake->pos[i].y = snake->pos[i-1].y;
-	}
-
-	head.x += add_x;
-	head.y += add_y;
-
-	(snake->pos)[0].x += add_x;
-	(snake->pos)[0].y += add_y;
-
-	MoveToPos((snake->pos)[0].x, (snake->pos)[0].y);
-	printf("%c", snake->SnakeChar_First);
-	
-	MoveToPos((snake->pos)[SNAKE_SIZE].x, (snake->pos)[SNAKE_SIZE].y);
-	printf("%c", snake->SnakeChar_Tail);
-	
-	return 0;
-}
-
-
-void InitSnake(Snake * snake)
-{
-	snake->SnakeChar_First = 'O';
-	snake->SnakeChar = 'o';
-	snake->SnakeChar_Tail = '.';
-	
-	for ( int i = 0; i < MAX_SIZE; i++ )
-	{
-		(snake->pos)[i].x = -10;
-		(snake->pos)[i].y = -10;
-	}
-	
-	SetSnakeSize(snake, 3);
-	SetSnakeSpeed(snake, 80);
-	SetSnakeNextDirection(snake, RIGHT);
-	SetSnakeDirection(snake, RIGHT);
-}
-
-
-void draw_snake(Snake * snake)
-{
-	const int SNAKE_SIZE = GetSnakeSize(snake); 
-    int remaining = -1;
-
-	while (remaining++ < SNAKE_SIZE)
-    {
-        char symbol = snake->SnakeChar;
-        if (remaining == 0)
-            symbol = snake->SnakeChar_First;
-        else if (remaining == SNAKE_SIZE)
-            symbol = snake->SnakeChar_Tail;
-		
-		if (snake->pos[remaining].x < 0 || snake->pos[remaining].y < 0) break;
-        
-		MoveToPos((snake->pos)[remaining].x, (snake->pos)[remaining].y);
-        printf("%c", symbol);
-    }
-
-    fflush(stdout);
-
-}
-
-void DrawGameInfo(Snake * snake, Screen * screen)
-{
-	const int SCREEN_HEIGHT = 31;
-	const int SNAKE_SIZE = GetSnakeSize(snake);
-	const int SCORES = SNAKE_SIZE - 3;
-
-    MoveToPos(0, SCREEN_HEIGHT ); 
-
-	printf("Score: %i | t - turbo | x - Quit the game | p - pause the game ", SCORES);
-}
-
-int SetSnakeDirection(Snake * snake, int direction_)
-{
-	if (direction_ != RIGHT
-		&& direction_ != LEFT
-		&& direction_ != UP
-		&& direction_ != DOWN)
-	{
-	   return -1;
-	}
-
-	snake->direction = direction_;
-	return 0;
-}
-
-int GetSnakeDirection(Snake * snake)
-{
-	return snake->direction;
-}
-
-void InitScreen(Screen * screen, struct winsize * w)
-{
-	screen->width = -30;
-	screen->height = -30;
-
-	if(screen->width < 0 || screen->height < 0)
-	{
-		screen->height = w->ws_row - 1;
-		screen->width = w->ws_col;
-	}
-	
-	if(screen->width >= MAP_MAX_WIDTH)
-	{	
-		screen->width = MAP_MAX_WIDTH - 1;
-	}
-	if(screen->height >= MAP_MAX_HEIGHT)
-	{
-		screen->height = MAP_MAX_HEIGHT - 2;	// why -2, to disply scores.
-	}
-}
-
-int SetSnakeNextDirection(Snake * snake, int nextDirection_)
-{
-	snake->new_direction = nextDirection_;
-	return 0;
-}
-
-int GetSnakeNextDirection(Snake * snake)
-{
-	return snake->new_direction;
-}
-
-int SetSnakeSpeed(Snake * snake, int speed_)
-{
-	if (speed_ < 0)
-	{
-		return -1;
-	}
-
-	snake->speed = speed_;
-	return 0;
-}
-
-int GetSnakeSpeed(Snake * snake)
-{
-	return snake->speed;
-}
-
    ///////////////////////////////// FOOD //////////////
 
-void InitFood(Food * food)
-{
-	food->DISPLAY_FOOD = '@';	
-}
-
-char GetFoodSymbol(Food * food)
-{
-	return food->DISPLAY_FOOD;
-}
-
-int SetFoodPos(Food * food, Pos pos_)
-{
-	food->pos = pos_;
-}
-Pos GetFoodPos(Food * food)
-{
-	return food->pos;
-}
 
 int LocateFood(Snake * snake, Food * food, Screen * screen)
 {
@@ -642,8 +296,8 @@ int LocateFood(Snake * snake, Food * food, Screen * screen)
 	SetFoodPos(food, pos);
 
 	// Draw food
-    MoveToPos(pos.x, pos.y);
-    printf("%c", GetFoodSymbol(food));
+    	MoveToPos(pos.x, pos.y);
+    	printf("%c", GetFoodSymbol(food));
 
 	return 0;
 }
@@ -658,14 +312,3 @@ Pos GetRandomPos(int width, int height)
 	return pos;
 }
 
-
-void Clear()
-{
-	printf("\033[H\033[J");
-}
-
-
-void MoveToPos(int x, int y)
-{
-	printf("\033[%d;%dH",(y+1),(x+1));
-}
